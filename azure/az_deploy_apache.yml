@@ -1,0 +1,52 @@
+---
+- name: Deploy DS Agent
+  hosts: resourcegroupone
+  become: yes
+  vars_files:
+    - ../vars/secrets.yml
+    - ../vars/azure.yml
+  vars:
+    ansible_become_pass: "{{ az_become_pass }}"
+  tasks:
+    - name: Update repositories cache
+      yum:
+        update_cache: yes
+      when: ansible_pkg_mgr == "yum"
+      become: true
+    - name: Update repositories cache
+      apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == "apt"
+      become: true
+
+    - name: Install the Apache (yum)
+      yum: 
+        name:
+          - httpd
+        state: present
+      when: ansible_pkg_mgr == "yum"
+      become: true
+    - name: Install the Apache (apt)
+      yum: 
+        name:
+          - apache2
+        state: present
+      when: ansible_pkg_mgr == "apt"
+      become: true
+
+    - name: Set Policy
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: set-policy-by-name
+        policy_name: Linux Web Server
+    - name: Update Configuration
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: update-configuration
+    - name: Initiate Recommendation Scan
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: run-recommendation-scans

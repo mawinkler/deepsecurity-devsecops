@@ -1,0 +1,20 @@
+---
+- name: Deploy DS Agent
+  hosts: resourcegroupone
+  become: yes
+  vars_files:
+    - ../vars/secrets.yml
+    - ../vars/azure.yml
+  vars:
+    ansible_become_pass: "{{ az_become_pass }}"
+  tasks:
+    - name: Including Role
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: deploy
+        dsm_agent_download_hostname: "{{ agent_download_hostname }}"
+        dsm_agent_download_port: "{{ agent_download_port }}"
+        dsm_agent_activation_hostname: "{{ agent_activation_hostname }}"
+        dsm_agent_activation_port: "{{ agent_activation_port }}"
+        force_reactivation: False

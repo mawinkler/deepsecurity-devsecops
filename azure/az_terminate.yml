@@ -1,0 +1,22 @@
+---
+- name: Terminate Azure VMs
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Terminate Azure VM 1
+      azure_rm_virtualmachine:
+        resource_group: resourcegroupone
+        name: testvm001
+        state: absent
+        remove_on_absent:
+          - network_interfaces
+          - virtual_storage
+
+    - name: Terminate Azure VM 2
+      azure_rm_virtualmachine:
+        resource_group: resourcegroupone
+        name: testvm002
+        state: absent
+        remove_on_absent:
+          - network_interfaces
+          - virtual_storage

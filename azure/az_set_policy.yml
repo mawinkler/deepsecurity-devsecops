@@ -1,0 +1,26 @@
+---
+- name: Deploy DS Agent
+  hosts: resourcegroupone
+  become: yes
+  vars_files:
+    - ../vars/secrets.yml
+    - ../vars/azure.yml
+  vars:
+    ansible_become_pass: "{{ az_become_pass }}"
+  tasks:
+    - name: Set Policy
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: set-policy-by-name
+        policy_name: Linux Web Server
+    - name: Update Configuration
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: update-configuration
+    - name: Initiate Recommendation Scan
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: run-recommendation-scans

@@ -1,0 +1,43 @@
+---
+- name: Deploy DS Agent
+  hosts: resourcegroupone
+  become: yes
+  vars_files:
+    - ../vars/secrets.yml
+    - ../vars/azure.yml
+  vars:
+    ansible_become_pass: "{{ az_become_pass }}"
+  tasks:
+    - name: Update YUM cache
+      yum:
+        update_cache: yes
+      when: ansible_pkg_mgr == "yum"
+    - name: Update APT cache
+      apt:
+        update_cache: yes
+      when: ansible_pkg_mgr == "apt"
+    - name: Install the latest version of "EPEL"
+      yum:
+        name: epel-release
+        state: present
+      when: ansible_pkg_mgr == "yum"
+    - name: Install the latest version of "facter"
+      yum:
+        name: facter
+        state: present
+      when: ansible_pkg_mgr == "yum"
+    - name: Install the latest version of "facter"
+      apt:
+        name: facter
+        state: present
+      when: ansible_pkg_mgr == "apt"
+
+    - name: "Create custom fact directory"
+      file:
+        path: "/etc/ansible/facts.d"
+        state: "directory"
+    - name: "Insert custom fact file"
+      copy:
+        src: ../files/dsa_status.fact
+        dest: /etc/ansible/facts.d/dsa_status.fact
+        mode: 0755

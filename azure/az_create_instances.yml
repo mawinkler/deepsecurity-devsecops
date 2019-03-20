@@ -1,0 +1,43 @@
+---
+- name: Create Azure VM
+  hosts: localhost
+  connection: local
+  vars_files:
+    - ../vars/secrets.yml
+    - ../vars/azure.yml
+  tasks:
+    - name: Create Azure VM 1
+      azure_rm_virtualmachine:
+        resource_group: resourcegroupone
+        name: testvm001
+        vm_size: Standard_D2s_v3
+        admin_username: "{{ az_admin_username }}"
+        admin_password: "{{ az_admin_password }}"
+        ssh_public_keys:
+          - path: /home/ansible/.ssh/authorized_keys
+            key_data: "{{ ansible_ssh_key }}"
+        image:
+          offer: CentOS
+          publisher: OpenLogic
+          sku: '7.1'
+          version: latest
+        tags:
+          env: development
+
+    - name: Create Azure VM 2
+      azure_rm_virtualmachine:
+        resource_group: resourcegroupone
+        name: testvm002
+        vm_size: Standard_D2s_v3
+        admin_username: "{{ az_admin_username }}"
+        admin_password: "{{ az_admin_password }}"
+        ssh_public_keys:
+          - path: /home/ansible/.ssh/authorized_keys
+            key_data: "{{ ansible_ssh_key }}"
+        image:
+          offer: UbuntuServer
+          publisher: Canonical
+          sku: '18.04-LTS'
+          version: latest
+        tags:
+          env: development
