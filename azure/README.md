@@ -1,7 +1,7 @@
-ansible-playbook --ask-vault-pass -i azure_rm.py az_create_instances.yml
+<ansible-playbook --ask-vault-pass -i azure_rm.py az_create_instances.yml
 
-ssh-keygen -f /home/ansible/.ssh/known_hosts -R 40.68.208.221
-ssh-keygen -f /home/ansible/.ssh/known_hosts -R 13.80.101.136
+ssh-keygen -f /home/ansible/.ssh/known_hosts -R <testvm001 IP>
+ssh-keygen -f /home/ansible/.ssh/known_hosts -R <testvm002 IP>
 
 ansible-playbook --ask-vault-pass -i azure_rm.py az_deploy_dsagent.yml
 
