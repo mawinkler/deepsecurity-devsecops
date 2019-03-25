@@ -3,8 +3,8 @@
   hosts: localhost
   connection: local
   vars_files:
-    - ../vars/secrets.yml
-    - ../vars/azure.yml
+    - ../../vars/secrets.yml
+    - ../../vars/azure.yml
   tasks:
     - name: Create Azure VM 1
       azure_rm_virtualmachine:

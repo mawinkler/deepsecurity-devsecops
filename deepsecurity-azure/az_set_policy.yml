@@ -3,8 +3,8 @@
   hosts: resourcegroupone
   become: yes
   vars_files:
-    - ../vars/secrets.yml
-    - ../vars/azure.yml
+    - ../../vars/secrets.yml
+    - ../../vars/azure.yml
   vars:
     ansible_become_pass: "{{ az_become_pass }}"
   tasks:
