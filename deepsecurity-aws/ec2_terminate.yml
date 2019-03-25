@@ -1,0 +1,12 @@
+---
+    
+- name: Terminate tagged instances
+  hosts: tag_env_demo
+  gather_facts: False
+  tasks:
+    - ec2_metadata_facts:
+    - ec2:
+        state: absent
+        region: "{{ ansible_ec2_placement_region }}"
+        instance_ids: "{{ ansible_ec2_instance_id }}"
+      delegate_to: localhost

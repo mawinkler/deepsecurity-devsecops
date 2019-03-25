@@ -1,0 +1,14 @@
+---
+- name: Update Configuration
+  hosts: tag_env_demo
+  tasks:
+    - name: Update Configuration
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: update-configuration
+    - name: Initiate Recommendation Scan
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: run-recommendation-scans

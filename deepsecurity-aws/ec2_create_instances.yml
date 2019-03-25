@@ -1,0 +1,56 @@
+---
+- name: Create EC2 instance
+  hosts: localhost
+  gather_facts: False
+  connection: local
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/aws.yml
+  tasks:
+  - name: Create EC2 Instance Web Server
+    ec2:
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_access_key }}"
+      key_name: ansible
+      region: "{{ lab_region }}"
+      instance_type: t2.micro
+      user_data: |
+                 #!/bin/sh
+                 echo "{{ ansible_ssh_key }}" >> /home/ubuntu/.ssh/authorized_keys
+                 apt update
+                 apt install -y python python-simplejson
+      image: "{{ lab_image }}"
+      wait: true
+      count: 1
+      group: "{{ lab_group }}"
+      vpc_subnet_id: "{{ lab_vpc_subnet_id }}"
+      assign_public_ip: yes
+      private_ip: "{{ webserver_address }}"
+      instance_tags:
+        env: demo
+        role: web_server
+    register: ec2
+
+  - name: Create EC2 Instance Database Server
+    ec2:
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_access_key }}"
+      key_name: ansible
+      region: "{{ lab_region }}"
+      instance_type: t2.micro
+      user_data: |
+                 #!/bin/sh
+                 echo "{{ ansible_ssh_key }}" >> /home/ubuntu/.ssh/authorized_keys
+                 apt update
+                 apt install -y python python-simplejson
+      image: "{{ lab_image }}"
+      wait: true
+      count: 1
+      group: "{{ lab_group }}"
+      vpc_subnet_id: "{{ lab_vpc_subnet_id }}"
+      assign_public_ip: yes
+      private_ip: "{{ mysql_address }}"
+      instance_tags:
+        env: demo
+        role: database_server
+    register: ec2

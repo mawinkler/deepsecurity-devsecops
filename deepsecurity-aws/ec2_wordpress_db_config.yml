@@ -1,0 +1,80 @@
+---
+- name: Prepare MySQL database for Wordpress
+  hosts: tag_role_database_server
+  become: yes
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/aws.yml
+  tasks:
+  - name: Allow remote access to mysqld
+    lineinfile:
+      dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"
+      regexp: "^bind-address"
+      line: "#bind-address = 127.0.0.1"
+  - name: Restart MySQL
+    service:
+      name: mysql
+      state: restarted
+  - name: Create wordpress database
+    mysql_db:
+      name: "{{ mysql_db }}"
+      state: present
+  - name: Create mysql user (local)
+    mysql_user:
+      name: "{{ mysql_user }}"
+      password: "{{ mysql_password }}"
+      priv: '*.*:ALL'
+      state: present
+  - name: Create mysql user (remote)
+    mysql_user:
+      host: "%"
+      name: "{{ mysql_user }}"
+      password: "{{ mysql_password }}"
+      priv: '*.*:ALL'
+      state: present
+
+- name: Configure Apache2 for Wordpress
+  hosts: tag_role_web_server
+  become: yes
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/aws.yml
+  tasks:
+  - name: Copy sample config file
+    copy:
+      remote_src: true
+      src: "/usr/share/wordpress/wp-config-sample.php"
+      dest: "/etc/wordpress/config-{{ inventory_hostname }}.php"
+  - name: Update WordPress config file
+    lineinfile:
+      dest="/etc/wordpress/config-{{ inventory_hostname }}.php"
+      regexp="{{ item.regexp }}"
+      line="{{ item.line }}"
+    with_items:
+      - {'regexp': "define\\('DB_NAME', '(.)+'\\);", 'line': "define('DB_NAME', '{{ mysql_db }}');"}
+      - {'regexp': "define\\('DB_USER', '(.)+'\\);", 'line': "define('DB_USER', '{{ mysql_user }}');"}
+      - {'regexp': "define\\('DB_PASSWORD', '(.)+'\\);", 'line': "define('DB_PASSWORD', '{{ mysql_password }}');"}
+      - {'regexp': "define\\('DB_HOST', '(.)+'\\);", 'line': "define('DB_HOST', '{{ mysql_address }}');"}
+  - name: Configure apache site
+    copy:
+      dest: "/etc/apache2/sites-available/wordpress.conf"
+      content: |
+        Alias /blog /usr/share/wordpress
+        <Directory /usr/share/wordpress>
+            Options FollowSymLinks
+            AllowOverride Limit Options FileInfo
+            DirectoryIndex index.php
+            Order allow,deny
+            Allow from all
+        </Directory>
+        <Directory /usr/share/wordpress/wp-content>
+            Options FollowSymLinks
+            Order allow,deny
+            Allow from all
+        </Directory>
+  - name: Enable Wordpress site
+    command: a2ensite wordpress.conf
+  - name: Restart apache2
+    service:
+      name: apache2
+      state: restarted
