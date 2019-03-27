@@ -1,0 +1,58 @@
+---
+- name: Create an instance
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+  vars:
+    scopes:
+      - https://www.googleapis.com/auth/compute
+
+  tasks:
+   - name: terminate a instance
+     gcp_compute_instance:
+         state: absent
+         name: eu-gcp-web-1
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+   - name: terminate a disk
+     gcp_compute_disk:
+         name: 'disk-instance'
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes:
+           - https://www.googleapis.com/auth/compute
+         state: absent
+   - name: terminate a firewall
+     gcp_compute_firewall:
+         name: ansible-firewall
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: absent
+   - name: terminate a network
+     gcp_compute_network:
+         name: 'network-instance'
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: absent
+   - name: terminate a address
+     gcp_compute_address:
+         name: 'address-instance'
+         region: "{{ region }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: absent

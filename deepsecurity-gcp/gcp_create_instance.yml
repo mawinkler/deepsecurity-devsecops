@@ -1,0 +1,93 @@
+---
+- name: Create an instance
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+  vars:
+    scopes:
+      - https://www.googleapis.com/auth/compute
+
+  tasks:
+   - name: create a disk
+     gcp_compute_disk:
+         name: 'disk-instance'
+         size_gb: 10
+         source_image: 'projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts'
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes:
+           - https://www.googleapis.com/auth/compute
+         state: present
+     register: disk
+   - name: create a network
+     gcp_compute_network:
+         name: 'network-instance'
+         auto_create_subnetworks: yes
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: present
+     register: network
+   - name: create a firewall
+     gcp_compute_firewall:
+         name: ansible-firewall
+         network: "projects/{{ project_id }}/global/networks/{{ network.name }}"
+         allowed:
+           - ip_protocol: tcp
+             ports: ['80','22']
+         target_tags:
+           - apache-http-server
+         source_ranges: ['0.0.0.0/0']
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: present
+     register: firewall
+   - name: create a address
+     gcp_compute_address:
+         name: 'address-instance'
+         region: "{{ region }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: present
+     register: address
+   - name: create a instance
+     gcp_compute_instance:
+         state: present
+         name: eu-gcp-web-1
+         machine_type: n1-standard-1
+         disks:
+           - auto_delete: true
+             boot: true
+             source: "{{ disk }}"
+         metadata:
+           startup-script: |
+             #!/bin/sh
+             apt update
+             apt install -y python python-simplejson
+         network_interfaces:
+             - network: "{{ network }}"
+               access_configs:
+                 - name: 'External NAT'
+                   nat_ip: "{{ address }}"
+                   type: 'ONE_TO_ONE_NAT'
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         tags:
+           items:
+             - apache-http-server
+             - webserver
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+     register: instance

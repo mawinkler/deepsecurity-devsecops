@@ -1,0 +1,22 @@
+---
+- name: Create IP address
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  hosts: localhost
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+  vars:
+    scopes:
+      - https://www.googleapis.com/auth/compute
+  tasks:
+   - name: Allocate an IP Address
+     gcp_compute_address:
+         state: present
+         name: 'test-address1'
+         region: "{{ region }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
