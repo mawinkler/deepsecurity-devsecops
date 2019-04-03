@@ -1,6 +1,23 @@
 ---
-- name: Deploy Deep Security Agent
-  hosts: all
+- name: Deploy Deep Security Agent on Windows
+  hosts: tag_windows
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+  tasks:
+    - name: Including Role
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: deploy
+        dsm_agent_download_hostname: "{{ agent_download_hostname }}"
+        dsm_agent_download_port: "{{ agent_download_port }}"
+        dsm_agent_activation_hostname: "{{ agent_activation_hostname }}"
+        dsm_agent_activation_port: "{{ agent_activation_port }}"
+        force_reactivation: False
+
+- name: Deploy Deep Security Agent on Windows
+  hosts: tag_linux
   become: yes
   vars_files:
     - ../../vars/secrets.yml
@@ -18,17 +35,17 @@
         force_reactivation: False
 
 - name: Set Ubuntu 16 EC2 Web Server policy
-  hosts: webservers
+  hosts: tag_webserver
   tasks:
     - name: Set Policy
       include_role:
         name: deep-security.deep-security-agent
       vars:
         operation: set-policy-by-name
-        policy_name: Ubuntu 18 Web Server
+        policy_name: Linux Web Server
 
 - name: Update Configuration
-  hosts: webservers
+  hosts: tag_webserver
   tasks:
     - name: Update Configuration
       include_role:
@@ -42,7 +59,7 @@
         operation: run-recommendation-scans
 
 - name: Prepare Facter for Deep Security
-  hosts: webservers
+  hosts: tag_linux
   become: yes
   tasks:
     - name: Update APT cache
