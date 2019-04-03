@@ -1,5 +1,5 @@
 ---
-- name: Create an instance
+- name: Terminate environment
   hosts: localhost
   gather_facts: no
   connection: local
@@ -21,9 +21,19 @@
          auth_kind: "{{ auth_kind }}"
          service_account_file: "{{ service_account_file }}"
          scopes: "{{ scopes }}"
+   - name: terminate a instance
+     gcp_compute_instance:
+         state: absent
+         name: eu-gcp-web-2
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+
    - name: terminate a disk
      gcp_compute_disk:
-         name: 'disk-instance'
+         name: 'disk-instance-linux-webserver'
          zone: "{{ zone }}"
          project: "{{ project_id }}"
          auth_kind: "{{ auth_kind }}"
@@ -31,6 +41,17 @@
          scopes:
            - https://www.googleapis.com/auth/compute
          state: absent
+   - name: terminate a disk
+     gcp_compute_disk:
+         name: 'disk-instance-windows-webserver'
+         zone: "{{ zone }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes:
+           - https://www.googleapis.com/auth/compute
+         state: absent
+
    - name: terminate a firewall
      gcp_compute_firewall:
          name: ansible-firewall
@@ -39,6 +60,7 @@
          service_account_file: "{{ service_account_file }}"
          scopes: "{{ scopes }}"
          state: absent
+
    - name: terminate a network
      gcp_compute_network:
          name: 'network-instance'
@@ -47,9 +69,20 @@
          service_account_file: "{{ service_account_file }}"
          scopes: "{{ scopes }}"
          state: absent
+
    - name: terminate a address
      gcp_compute_address:
-         name: 'address-instance'
+         name: 'address-instance-linux-webserver'
+         region: "{{ region }}"
+         project: "{{ project_id }}"
+         auth_kind: "{{ auth_kind }}"
+         service_account_file: "{{ service_account_file }}"
+         scopes: "{{ scopes }}"
+         state: absent
+
+   - name: terminate a address
+     gcp_compute_address:
+         name: 'address-instance-windows-webserver'
          region: "{{ region }}"
          project: "{{ project_id }}"
          auth_kind: "{{ auth_kind }}"
