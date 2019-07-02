@@ -1,0 +1,53 @@
+---
+- name: prepare project network
+  debugger: on_failed
+  hosts: localhost
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+
+  vars:
+    scopes:
+      - https://www.googleapis.com/auth/compute
+
+  tasks:
+    - name: check if google cloud SDK is installed
+      command: gcloud version
+      register: gcloud_installed
+      changed_when: false
+      ignore_errors: yes
+    - fail:
+        msg: "Please make sure Google Cloud SDK is installed before executing the role."
+      when: gcloud_installed is failed
+
+    - name: create a network
+      gcp_compute_network:
+        name: 'network-instance'
+        auto_create_subnetworks: yes
+        project: "{{ project_id }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ service_account_file }}"
+        scopes: "{{ scopes }}"
+        state: present
+      register: network
+
+    - name: create a firewall opening ports ['80', '443', '22', '3389', '5986','5985']
+      gcp_compute_firewall:
+        name: ansible-firewall
+        network:
+          selfLink: "global/networks/{{ network.name }}"
+        allowed:
+          - ip_protocol: tcp
+            ports: ['80', '443', '22', '3389', '5986','5985']
+        target_tags:
+          - webserver
+        source_ranges: ['0.0.0.0/0']
+        project: "{{ project_id }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ service_account_file }}"
+        scopes: "{{ scopes }}"
+        state: present
+      register: firewall
