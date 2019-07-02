@@ -13,6 +13,16 @@
       - https://www.googleapis.com/auth/compute
 
   tasks:
+    - name: Check if Google Cloud SDK is installed
+      command: gcloud version
+      register: gcloud_installed
+      changed_when: false
+      ignore_errors: yes
+
+    - fail:
+        msg: "Please make sure Google Cloud SDK is installed before executing the role."
+      when: gcloud_installed is failed
+
     - name: create a disk
       gcp_compute_disk:
         name: 'disk-instance-linux-webserver'
@@ -50,11 +60,13 @@
         scopes: "{{ scopes }}"
         state: present
       register: network
+#          selfLink: "projects/{{ project_id }}/global/networks/{{ network.name }}"
 
     - name: create a firewall
       gcp_compute_firewall:
         name: ansible-firewall
-        network: "projects/{{ project_id }}/global/networks/{{ network.name }}"
+        network:
+          selfLink: "global/networks/{{ network.name }}"
         allowed:
           - ip_protocol: tcp
             ports: ['80', '443', '22', '3389', '5986','5985']
@@ -102,7 +114,7 @@
           startup-script: |
             #!/bin/sh
             apt update
-            apt install -y python python-simplejson
+            apt install -y python3 python3-simplejson
         network_interfaces:
           - network: "{{ network }}"
             access_configs:
@@ -120,7 +132,7 @@
         service_account_file: "{{ service_account_file }}"
         scopes: "{{ scopes }}"
       register: instance_linux_webserver
-      
+
     - name: create a windows instance
       gcp_compute_instance:
         state: present
@@ -150,50 +162,3 @@
         service_account_file: "{{ service_account_file }}"
         scopes: "{{ scopes }}"
       register: instance_windows_webserver
-
-    - name: Check if Google Cloud SDK is installed
-      command: gcloud version
-      register: gcloud_installed
-      changed_when: false
-      ignore_errors: yes
-
-    - fail:
-        msg: "Please make sure Google Cloud SDK is installed before executing the role."
-      when: gcloud_installed is failed
-
-#    - name: Wait for WINRM to come up
-#      win_wait_for:
-#        host: "{{ address_windows_webserver }}"
-#        port: 5986
-#        delay: 10
-#        timeout: 180
-#      wait_for_connection:
-#        timeout: 900
-
-    - name: Create admin password
-      command: gcloud beta compute --project "erudite-variety-209408" reset-windows-password "eu-gcp-web-2" --zone "europe-west3-c" --quiet
-      register: username_password
-
-    - name: Password
-      debug:
-        msg: "{{ username_password.stdout_lines[1] }}"
-    - name: Username
-      debug:
-        msg: "{{ username_password.stdout_lines[2] }}"
-
-    - name: Create subdirectory
-      file:
-        path: "./group_vars/tag_windows"
-        state: directory
-
-    - name: Configure group_vars for windows
-      copy:
-        dest: "./group_vars/tag_windows/ec-gcp-web-2"
-        content: |
-          ansible_connection: winrm
-          ansible_port: 5986
-          ansible_winrm_transport: ntlm
-          ansible_winrm_server_cert_validation: ignore
-          ansible_password: {{ username_password.stdout_lines[1] | regex_replace('password:') }}
-          ansible_user: {{ username_password.stdout_lines[2] | regex_replace('username:') }}
-      delegate_to: 127.0.0.1
