@@ -8,6 +8,8 @@ keyed_groups:
     separator: '_'
     key: tags['items']
 hostnames:
+  - public_ip
+  - private_ip
   - name
 groups:
   webservers: "'-web-' in name"

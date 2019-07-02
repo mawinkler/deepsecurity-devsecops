@@ -1,9 +1,12 @@
 ---
-- name: Deploy Deep Security Agent on Windows
-  hosts: tag_windows
+- name: Deploy Deep Security Agent on linux and windows
+  hosts: tag_windows, tag_linux
+  debugger: on_failed
+
   vars_files:
     - ../../vars/secrets.yml
     - ../../vars/gcp.yml
+
   tasks:
     - name: Including Role
       include_role:
@@ -16,26 +19,8 @@
         dsm_agent_activation_port: "{{ agent_activation_port }}"
         force_reactivation: False
 
-- name: Deploy Deep Security Agent on Windows
+- name: Set Ubuntu 16 Web Server policy
   hosts: tag_linux
-  become: yes
-  vars_files:
-    - ../../vars/secrets.yml
-    - ../../vars/gcp.yml
-  tasks:
-    - name: Including Role
-      include_role:
-        name: deep-security.deep-security-agent
-      vars:
-        operation: deploy
-        dsm_agent_download_hostname: "{{ agent_download_hostname }}"
-        dsm_agent_download_port: "{{ agent_download_port }}"
-        dsm_agent_activation_hostname: "{{ agent_activation_hostname }}"
-        dsm_agent_activation_port: "{{ agent_activation_port }}"
-        force_reactivation: False
-
-- name: Set Ubuntu 16 EC2 Web Server policy
-  hosts: tag_webserver
   tasks:
     - name: Set Policy
       include_role:
@@ -44,8 +29,18 @@
         operation: set-policy-by-name
         policy_name: Linux Web Server
 
+- name: Set Windows 2012R2 Web Server policy
+  hosts: tag_windows
+  tasks:
+    - name: Set Policy
+      include_role:
+        name: deep-security.deep-security-agent
+      vars:
+        operation: set-policy-by-name
+        policy_name: Windows Web Server
+
 - name: Update Configuration
-  hosts: tag_webserver
+  hosts: tag_windows, tag_linux
   tasks:
     - name: Update Configuration
       include_role:

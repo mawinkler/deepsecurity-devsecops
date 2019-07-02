@@ -52,6 +52,9 @@
         state: present
       register: firewall
 
+#    - name: Create DNS zone
+#      gcdns_zone: zone=devopsmagic.com
+
     - name: Create linux instances
       include: gcp_create_linux_instance.yml item={{ linux_instance }}
       delegate_to: 127.0.0.1
