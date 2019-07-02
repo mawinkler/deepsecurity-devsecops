@@ -12,80 +12,31 @@
       - https://www.googleapis.com/auth/compute
 
   tasks:
-   - name: terminate a instance
-     gcp_compute_instance:
-         state: absent
-         name: eu-gcp-web-1
-         zone: "{{ zone }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
-   - name: terminate a instance
-     gcp_compute_instance:
-         state: absent
-         name: eu-gcp-web-2
-         zone: "{{ zone }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
+    - name: Terminate instances
+      include: gcp_terminate_instance.yml item={{ instance }}
+      delegate_to: 127.0.0.1
+      with_items:
+        - eu-gcp-web-linux-1
+        - eu-gcp-web-linux-2
+        - eu-gcp-web-windows-1
+        - eu-gcp-web-windows-2
+      loop_control:
+        loop_var: instance
 
-   - name: terminate a disk
-     gcp_compute_disk:
-         name: 'disk-instance-linux-webserver'
-         zone: "{{ zone }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes:
-           - https://www.googleapis.com/auth/compute
-         state: absent
-   - name: terminate a disk
-     gcp_compute_disk:
-         name: 'disk-instance-windows-webserver'
-         zone: "{{ zone }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes:
-           - https://www.googleapis.com/auth/compute
-         state: absent
+    - name: Terminate the firewall
+      gcp_compute_firewall:
+        name: ansible-firewall
+        project: "{{ project_id }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ service_account_file }}"
+        scopes: "{{ scopes }}"
+        state: absent
 
-   - name: terminate a firewall
-     gcp_compute_firewall:
-         name: ansible-firewall
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
-         state: absent
-
-   - name: terminate a network
-     gcp_compute_network:
-         name: 'network-instance'
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
-         state: absent
-
-   - name: terminate a address
-     gcp_compute_address:
-         name: 'address-instance-linux-webserver'
-         region: "{{ region }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
-         state: absent
-
-   - name: terminate a address
-     gcp_compute_address:
-         name: 'address-instance-windows-webserver'
-         region: "{{ region }}"
-         project: "{{ project_id }}"
-         auth_kind: "{{ auth_kind }}"
-         service_account_file: "{{ service_account_file }}"
-         scopes: "{{ scopes }}"
-         state: absent
+    - name: Terminate the network
+      gcp_compute_network:
+        name: network-instance
+        project: "{{ project_id }}"
+        auth_kind: "{{ auth_kind }}"
+        service_account_file: "{{ service_account_file }}"
+        scopes: "{{ scopes }}"
+        state: absent

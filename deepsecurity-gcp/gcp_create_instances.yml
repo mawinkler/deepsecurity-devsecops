@@ -1,5 +1,5 @@
 ---
-- name: Create an instance
+- name: Prepare netowork and create some instances
   debugger: on_failed
   hosts: localhost
   gather_facts: no
@@ -8,49 +8,22 @@
   vars_files:
     - ../../vars/secrets.yml
     - ../../vars/gcp.yml
+
   vars:
     scopes:
       - https://www.googleapis.com/auth/compute
 
   tasks:
-    - name: Check if Google Cloud SDK is installed
+    - name: Check if Google cloud SDK is installed
       command: gcloud version
       register: gcloud_installed
       changed_when: false
       ignore_errors: yes
-
     - fail:
         msg: "Please make sure Google Cloud SDK is installed before executing the role."
       when: gcloud_installed is failed
 
-    - name: create a disk
-      gcp_compute_disk:
-        name: 'disk-instance-linux-webserver'
-        size_gb: 10
-        source_image: 'projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts'
-        zone: "{{ zone }}"
-        project: "{{ project_id }}"
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes:
-          - https://www.googleapis.com/auth/compute
-        state: present
-      register: disk_linux_webserver
-    - name: create a disk
-      gcp_compute_disk:
-        name: 'disk-instance-windows-webserver'
-        size_gb: 50
-        source_image: 'projects/windows-cloud/global/images/family/windows-2012-r2'
-        zone: "{{ zone }}"
-        project: "{{ project_id }}"
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes:
-          - https://www.googleapis.com/auth/compute
-        state: present
-      register: disk_windows_webserver
-
-    - name: create a network
+    - name: Create a network
       gcp_compute_network:
         name: 'network-instance'
         auto_create_subnetworks: yes
@@ -60,9 +33,8 @@
         scopes: "{{ scopes }}"
         state: present
       register: network
-#          selfLink: "projects/{{ project_id }}/global/networks/{{ network.name }}"
 
-    - name: create a firewall
+    - name: Create a firewall opening ports ['80', '443', '22', '3389', '5986','5985']
       gcp_compute_firewall:
         name: ansible-firewall
         network:
@@ -80,85 +52,20 @@
         state: present
       register: firewall
 
-    - name: create a linux webserver address
-      gcp_compute_address:
-        name: 'address-instance-linux-webserver'
-        region: "{{ region }}"
-        project: "{{ project_id }}"
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes: "{{ scopes }}"
-        state: present
-      register: address_linux_webserver
-    - name: create a windows webserver address
-      gcp_compute_address:
-        name: 'address-instance-windows-webserver'
-        region: "{{ region }}"
-        project: "{{ project_id }}"
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes: "{{ scopes }}"
-        state: present
-      register: address_windows_webserver
+    - name: Create linux instances
+      include: gcp_create_linux_instance.yml item={{ linux-instance }}
+      delegate_to: 127.0.0.1
+      with_items:
+        - eu-gcp-web-linux-1
+        - eu-gcp-web-linux-2
+      loop_control:
+        loop_var: linux-instance
 
-    - name: create a linux instance
-      gcp_compute_instance:
-        state: present
-        name: eu-gcp-web-1
-        machine_type: n1-standard-1
-        disks:
-          - auto_delete: true
-            boot: true
-            source: "{{ disk_linux_webserver }}"
-        metadata:
-          startup-script: |
-            #!/bin/sh
-            apt update
-            apt install -y python3 python3-simplejson
-        network_interfaces:
-          - network: "{{ network }}"
-            access_configs:
-              - name: 'External NAT'
-                nat_ip: "{{ address_linux_webserver }}"
-                type: 'ONE_TO_ONE_NAT'
-        zone: "{{ zone }}"
-        project: "{{ project_id }}"
-        tags:
-          items:
-            - "{{ project_id }}"
-            - linux
-            - webserver
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes: "{{ scopes }}"
-      register: instance_linux_webserver
-
-    - name: create a windows instance
-      gcp_compute_instance:
-        state: present
-        name: eu-gcp-web-2
-        machine_type: n1-standard-1
-        disks:
-          - auto_delete: true
-            boot: true
-            source: "{{ disk_windows_webserver }}"
-        metadata:
-          sysprep-specialize-script-ps1: |
-            Invoke-Expression -Command ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1')); Enable-WSManCredSSP -Role Server -Force
-        network_interfaces:
-          - network: "{{ network }}"
-            access_configs:
-              - name: 'External NAT'
-                nat_ip: "{{ address_windows_webserver }}"
-                type: 'ONE_TO_ONE_NAT'
-        zone: "{{ zone }}"
-        project: "{{ project_id }}"
-        tags:
-          items:
-            - "{{ project_id }}"
-            - windows
-            - webserver
-        auth_kind: "{{ auth_kind }}"
-        service_account_file: "{{ service_account_file }}"
-        scopes: "{{ scopes }}"
-      register: instance_windows_webserver
+    - name: Create windows instances
+      include: gcp_create_windows_instance.yml item={{ windows-instance }}
+      delegate_to: 127.0.0.1
+      with_items:
+        - eu-gcp-web-windows-1
+        - eu-gcp-web-windows-2
+      loop_control:
+        loop_var: windows-instance

@@ -1,0 +1,31 @@
+---
+- name: Terminate a instance
+  gcp_compute_instance:
+    state: absent
+    name: "{{ item }}-instance"
+    zone: "{{ zone }}"
+    project: "{{ project_id }}"
+    auth_kind: "{{ auth_kind }}"
+    service_account_file: "{{ service_account_file }}"
+    scopes: "{{ scopes }}"
+
+- name: Terminate a disk
+  gcp_compute_disk:
+    name: "{{ item }}-disk"
+    zone: "{{ zone }}"
+    project: "{{ project_id }}"
+    auth_kind: "{{ auth_kind }}"
+    service_account_file: "{{ service_account_file }}"
+    scopes:
+      - https://www.googleapis.com/auth/compute
+    state: absent
+
+- name: Terminate a address
+  gcp_compute_address:
+    name: "{{ item }}-address"
+    region: "{{ region }}"
+    project: "{{ project_id }}"
+    auth_kind: "{{ auth_kind }}"
+    service_account_file: "{{ service_account_file }}"
+    scopes: "{{ scopes }}"
+    state: absent

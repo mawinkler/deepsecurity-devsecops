@@ -1,5 +1,5 @@
 ---
-- name: Create IP address
+- name: create IP address
   hosts: localhost
   connection: local
   gather_facts: no
@@ -11,7 +11,7 @@
     scopes:
       - https://www.googleapis.com/auth/compute
   tasks:
-   - name: Allocate an IP Address
+   - name: allocate an IP address
      gcp_compute_address:
          state: present
          name: 'test-address1'
