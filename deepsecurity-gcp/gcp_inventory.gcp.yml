@@ -7,6 +7,8 @@ keyed_groups:
   - prefix: tag
     separator: '_'
     key: tags['items']
+hostnames:
+  - name
 groups:
   webservers: "'-web-' in name"
   databaseservers: "'-db-' in name"

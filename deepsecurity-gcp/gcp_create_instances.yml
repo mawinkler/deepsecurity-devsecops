@@ -53,19 +53,19 @@
       register: firewall
 
     - name: Create linux instances
-      include: gcp_create_linux_instance.yml item={{ linux-instance }}
+      include: gcp_create_linux_instance.yml item={{ linux_instance }}
       delegate_to: 127.0.0.1
       with_items:
         - eu-gcp-web-linux-1
         - eu-gcp-web-linux-2
       loop_control:
-        loop_var: linux-instance
+        loop_var: linux_instance
 
     - name: Create windows instances
-      include: gcp_create_windows_instance.yml item={{ windows-instance }}
+      include: gcp_create_windows_instance.yml item={{ windows_instance }}
       delegate_to: 127.0.0.1
       with_items:
         - eu-gcp-web-windows-1
         - eu-gcp-web-windows-2
       loop_control:
-        loop_var: windows-instance
+        loop_var: windows_instance
