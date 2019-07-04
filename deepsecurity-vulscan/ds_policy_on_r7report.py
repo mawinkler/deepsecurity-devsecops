@@ -2,15 +2,17 @@
 
 DOCUMENTATION = '''
 ---
-module: ds_policy_on_report.py
+module: ds_policy_on_r7report.py
 
 short_description: Retrieves IPS rule identifiers coverering a given list of CVEs
-                   and sets all the found rules to the computers policy
+                   and sets all the found rules to the computers policy.
 
 description:
     - "This module retrieves IPS rule identifiers to protect against a list of
        CVEs. The identified rules are set within the policy of the given
        computer object within Deep Security.
+       The list of CVEs can either be given by command line argument or queried
+       from a vulnerability scan created by Rapid7. If
        Beware of the fact, that we add any rule even if it requires some
        configuration."
 
@@ -18,6 +20,9 @@ options:
     --hostName    hostname of the targeted host
     --dsm_url     url of deep security manager
     --api_key     api-key for deep security
+    --r7_url      url of rapid7
+    --r7_username username for rapid7
+    --r7_password password for rapid7
     --query       cves to handle
 
 author:
@@ -25,7 +30,7 @@ author:
 '''
 
 EXAMPLES = '''
-python3 python3 ./r7_query_cves2.py \
+python3 ./ds_policy_on_r7report.py \
     --hostname=172.21.2.74
     --r7_url=https://<URL>:<PORT>
     --r7_username=<Username R7>
@@ -33,26 +38,32 @@ python3 python3 ./r7_query_cves2.py \
     --dsm_url=https://<URL>:<PORT>
     --api_key=<API-KEY>
 
- ds_policy_on_report.py \
+ python3 ./ds_policy_on_r7report.py \
     --hostname=ubuntu1 \
     --dsm_url=https://<URL>:<PORT> \
     --api_key=<API-KEY> \
     --query $(./parse.sh qualys_scan.csv)
 
-python ds_policy_on_report.py \
+python3 ./ds_policy_on_r7report.py \
     --hostname=ubuntu1 \
     --dsm_url=https://<URL>:<PORT> \
     --api_key=<API-KEY> \
     --query CVE-2017-5715
-
-python ds_policy_on_report.py \
-    --hostname=ubuntu1 \
-    --dsm_url=https://<URL>:<PORT> \
-    --api_key=<API-KEY> \
-    --query CVE-2016-2118
 '''
 
 RETURN = '''
+CVEs detected by R7 for 172.21.2.74:{'CVE-2017-5715', 'CVE-2017-5754'}
+Updating Deep Security Policy...
+Rules covering CVEs:  {'1008828'}
+Rules mapping:        {'1008828 (CVE-2017-5715)'}
+CVEs matched:         {'CVE-2017-5715'}
+CVEs matched count:   1
+CVEs unmatched:       {'CVE-2017-5754'}
+CVEs unmatched count: 1
+Accessing computer object for ubuntu2
+Ensuring that the rules are set
+All set.
+
 Rules covering CVEs:  set([u'1008828'])
 CVEs matched:         set(['CVE-2017-5715'])
 CVEs matched count:   1
@@ -387,10 +398,12 @@ def main():
 
     asset_cves = set()
 
-    print(args.query)
     if args.query == None:
         print("Requesting vulnerability scan report..." + args.r7_url)
-        asset_cves = r7_asset_vulnerabilities(args.r7_url, args.r7_username, args.r7_password, args.hostname)
+        asset_cves = r7_asset_vulnerabilities(args.r7_url,
+                                              args.r7_username,
+                                              args.r7_password,
+                                              args.hostname)
         print("CVEs detected for " + args.hostname + ":" + str(asset_cves))
     else:
         asset_cves = args.query
