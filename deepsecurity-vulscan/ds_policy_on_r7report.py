@@ -475,7 +475,7 @@ def main():
 
     print("\nRunning Deep Security Policy Manager for Rapid7 vulnerabilities")
     if args.query == None:
-        print("Requesting vulnerability scan report... {}".format(args.r7_url))
+        print("Requesting vulnerability scan report for {}".format(args.hostname))
         asset_id = r7_asset_search(args.r7_url,
                                    args.r7_username,
                                    args.r7_password,
