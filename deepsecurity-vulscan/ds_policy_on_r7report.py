@@ -99,7 +99,8 @@ import argparse
 
 def r7_asset_search(r7_url, r7_username, r7_password, r7_asset):
     '''
-    Search for an asset within Rapid7. Return value is R7s asset id
+    Search for an asset within Rapid7.
+    Returns R7 asset id
     '''
     url = r7_url + "/api/3/assets/search"
     data = { "match": "all",
@@ -115,40 +116,108 @@ def r7_asset_search(r7_url, r7_username, r7_password, r7_asset):
                              verify=False,
                              auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
+    if 'status' in response:
+        if response['status'] >= 400:
+            raise Exception("Authentication to Rapid7 not successful"
+                           + " or service unavailable.\n"
+                           + response['message'])
+
+    if 'resources' not in response:
+        raise KeyError(response['message'])
+
     return (response['resources'][0]['id'])
 
-def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, r7_asset):
+def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, asset_id):
     '''
     Retrieve vulnerabilities of asset
+    Returns a dictionary of vulnerailities (key) and cves (value set))
+    for the given asset
     '''
-    asset_id = r7_asset_search(r7_url, r7_username, r7_password, r7_asset)
+    # Return dictionary
+    asset_vuls_cves = {}
 
     url = r7_url + "/api/3/assets/"  + str(asset_id) + "/vulnerabilities?size=10000"
 
     response = requests.get(url, verify=False, auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
+    if 'status' in response:
+        if response['status'] >= 400:
+            raise Exception("Authentication to Rapid7 not successful"
+                          + " or service unavailable.\n"
+                          + response['message'])
+
     asset_cves = set()
 
     for vul in response['resources']:
-        cves = r7_vulnerability_cves(r7_url, r7_username, r7_password, vul['id'])
-        if cves != "":
-            for cve in cves:
-                asset_cves.add(cve)
+        asset_cves = r7_vulnerability_cves(r7_url, r7_username, r7_password, vul['id'])
+        cves = set()
 
-    return asset_cves
+        if asset_cves != "":
+            for cve in asset_cves:
+                cves.add(cve)
+        asset_vuls_cves[str(vul['id']).strip()] = cves
+
+    return asset_vuls_cves
 
 def r7_vulnerability_cves(r7_url, r7_username, r7_password, vul_id):
     '''
     Retrieve cves of vulnerability
+    Returns a set of cves if present in the vulnerability
     '''
     url = r7_url + "/api/3/vulnerabilities/"  + str(vul_id)
 
     response = requests.get(url, verify=False, auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
+    if 'status' in response:
+        if response['status'] >= 400:
+            raise Exception("Authentication to Rapid7 not successful"
+                          + " or service unavailable.\n"
+                          + response['message'])
+
     if 'cves' in response:
         return response['cves']
     else:
         return ""
+
+def r7_create_exception_for_instance(r7_url, r7_username, r7_password, asset_id, vul_id):
+    '''
+    Create an exception for a given vulnerability and instance
+    '''
+    submitter_name = "nxadmin"#
+    submitter_user = 1
+
+    url = r7_url + "/api/3/vulnerability_exceptions"
+    data = { "review": { "comment": "Auto approved by submitter." },
+             "scope": { "id": asset_id,
+                        "type": "instance",
+                        "vulnerability": vul_id
+             },
+             "state": "approved",
+             "submit": { "comment": "Deep Security IPS rules active",
+                         "name": submitter_name,
+                         "reason": "Compensating Control",
+                         "user": submitter_user
+             }
+           }
+    post_header = { "Accept": "application/json;charset=UTF-8",
+                    "Content-type": "application/json" }
+    response = requests.post(url,
+                             data=json.dumps(data),
+                             headers=post_header,
+                             verify=False,
+                             auth=HTTPBasicAuth(r7_username, r7_password)).json()
+
+    if 'status' in response:
+        if response['status'] == 200:
+            print("  Exception for " + vul_id + " created.\n" + response['message'])
+            return 0
+        if response['status'] >= 400:
+            if response['message'] == "A vulnerability exception with this scope already exists.":
+                print("  Exception for " + vul_id + " already exists.")
+            else:
+                raise Exception("Authentication to Rapid7 not successful"
+                              + " or service unavailable.\n"
+                              + str(response['status']) + ":" + response['message'])
 
 def build_rules_cves_map(dsm_url, api_key):
     '''
@@ -298,6 +367,9 @@ def rule_absent(computer, rule, dsm_url, api_key):
     return 200
 
 def run_module(dsm_url, api_key, hostname, query):
+    '''
+    Returns a result object
+    '''
 
     # Result dictionary
     result = dict(
@@ -321,6 +393,9 @@ def run_module(dsm_url, api_key, hostname, query):
     unmatch_counter = len(query)
 
     cves_list = {}
+    # If a cves_network.cache file generated by screperoter is found in the local directory, we load
+    # the hash map to easily lookup the attack vector and the criticality. Only network exploitable
+    # vulnerabilities currently exist in the cache file
     if os.path.isfile('cves_network.cache'):
         with open('cves_network.cache', 'rb') as fp:
             cves_list = pickle.load(fp)
@@ -329,10 +404,12 @@ def run_module(dsm_url, api_key, hostname, query):
         matched = False
         attack_vector = ""
         criticality = ""
+        if str(cve) in cves_list:
+            attack_vector = " N"
+            criticality = str(cves_list[str(cve)])
+        else:
+            attack_vector = " L"
         for rule in rules_cves:
-            if str(cve) in cves_list:
-                attack_vector = " NETWORK"
-                criticality = " : " + cves_list[str(cve)]
             if str(cve) in rules_cves[str(rule)]:
                 # Query rule identifier
                 url = dsm_url + "/api/intrusionpreventionrules/search"
@@ -351,13 +428,13 @@ def run_module(dsm_url, api_key, hostname, query):
                 rules_mapping.add(
                   response['intrusionPreventionRules'][0]['identifier']
                   + " (" + str(cve) + ")" + attack_vector + criticality)
-                matched_list.add(str(cve) + attack_vector + criticality)
+                matched_list.add(str(cve))
                 if (matched == False):
                     match_counter += 1
                     unmatch_counter -= 1
                     matched = True
         if (matched == False):
-            unmatched_list.add(str(cve) + attack_vector + criticality)
+            unmatched_list.add(str(cve))
 
     # Populate result set
     result['json'] = { "rules_covering": rules,
@@ -367,22 +444,18 @@ def run_module(dsm_url, api_key, hostname, query):
                        "cves_matched_count": match_counter,
                        "cves_unmatched_count": unmatch_counter }
 
-    # Return key/value results
-    print("Rules covering CVEs:  {}".format(result['json']['rules_covering']))
-    print("Rules mapping:        {}".format(result['json']['rules_mapping']))
-    print("CVEs matched:         {}".format(result['json']['cves_matched']))
-    print("CVEs matched count:   {}".format(result['json']['cves_matched_count']))
-    print("CVEs unmatched:       {}".format(result['json']['cves_unmatched']))
-    print("CVEs unmatched count: {}".format(result['json']['cves_unmatched_count']))
-
-    print("Accessing computer object for {}".format(hostname))
+    # Search for the computer object to modify it's policy
+    print("Accessing computer object for {}.".format(hostname))
     computer = search_computer(hostname, dsm_url, api_key)
 
-    print("Ensuring that the rules are set")
+    # Ensure, that matching ips rules are present within the computers policy
+    print("Ensuring that the covering rules are set.")
     for identifier in result['json']['rules_covering']:
         rule_present(computer, search_ipsrule(identifier, dsm_url, api_key), dsm_url, api_key)
 
-    print("All set.")
+    print("Policy updated.")
+
+    return result
 
 def main():
 
@@ -396,21 +469,59 @@ def main():
     parser.add_argument("--query", nargs='*', type=str, help="cves to handle")
     args = parser.parse_args()
 
+    asset_id = 0
     asset_cves = set()
+    asset_vuls_cves = {}
 
+    print("\nRunning Deep Security Policy Manager for Rapid7 vulnerabilities")
     if args.query == None:
-        print("Requesting vulnerability scan report..." + args.r7_url)
-        asset_cves = r7_asset_vulnerabilities(args.r7_url,
-                                              args.r7_username,
-                                              args.r7_password,
-                                              args.hostname)
-        print("CVEs detected for " + args.hostname + ":" + str(asset_cves))
+        print("Requesting vulnerability scan report... {}".format(args.r7_url))
+        asset_id = r7_asset_search(args.r7_url,
+                                   args.r7_username,
+                                   args.r7_password,
+                                   args.hostname)
+        asset_vuls_cves = r7_asset_vulnerabilities(args.r7_url,
+                                                   args.r7_username,
+                                                   args.r7_password,
+                                                   asset_id)
+
+        for vul_id in asset_vuls_cves:
+            for cve in asset_vuls_cves[vul_id]:
+                asset_cves.add(str(cve))
+        print("CVEs to handle:       {}".format(str(asset_cves)))
+            # asset_cves.append(asset_vuls_cves[])
     else:
         asset_cves = args.query
 
-    print("Updating Deep Security Policy...")
+    print("\nUpdating Deep Security Policy...")
     # run_module(args.dsm_url, args.api_key, args.hostname, args.query)
-    run_module(args.dsm_url, args.api_key, "ubuntu2", asset_cves)
+    result = run_module(args.dsm_url, args.api_key, args.hostname, asset_cves)
+
+    # Return key/value results
+    # print("Rules covering CVEs:  {}".format(result['json']['rules_covering']))
+    print("Rules mapping:        {}".format(result['json']['rules_mapping']))
+    print("CVEs matched:         {}".format(result['json']['cves_matched']))
+    print("CVEs matched count:   {}".format(result['json']['cves_matched_count']))
+    print("CVEs unmatched:       {}".format(result['json']['cves_unmatched']))
+    print("CVEs unmatched count: {}\n".format(result['json']['cves_unmatched_count']))
+
+    # create exceptions for vulnerabilities with the matched cves
+    #
+    # NOTE:
+    # currently, an exception is created when at least one cve from
+    # a vulnerability is covered by DS! Improvement needed
+
+    for cve in result['json']['cves_matched']:
+        for vul_id in asset_vuls_cves:
+            if cve in asset_vuls_cves[vul_id]:
+                print("Creating exception for {}".format(vul_id))
+                r7_create_exception_for_instance(args.r7_url,
+                                                 args.r7_username,
+                                                 args.r7_password,
+                                                 asset_id,
+                                                 vul_id)
+
+    print("Done.")
 
 if __name__ == '__main__':
     main()
