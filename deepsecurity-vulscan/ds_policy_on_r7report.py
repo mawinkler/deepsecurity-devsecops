@@ -123,7 +123,7 @@ def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, r7_asset):
     '''
     asset_id = r7_asset_search(r7_url, r7_username, r7_password, r7_asset)
 
-    url = r7_url + "/api/3/assets/"  + str(asset_id) + "/vulnerabilities"
+    url = r7_url + "/api/3/assets/"  + str(asset_id) + "/vulnerabilities?size=10000"
 
     response = requests.get(url, verify=False, auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
@@ -132,8 +132,8 @@ def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, r7_asset):
     for vul in response['resources']:
         cves = r7_vulnerability_cves(r7_url, r7_username, r7_password, vul['id'])
         if cves != "":
-            ## TODO: a vulnerability might have more than one CVE assigned
-            asset_cves.add(cves[0])
+            for cve in cves:
+                asset_cves.add(cve)
 
     return asset_cves
 
