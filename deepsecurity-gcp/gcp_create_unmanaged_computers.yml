@@ -1,6 +1,5 @@
 ---
 - name: Deep Security
-  gather_facts: no
   hosts: all
 
   vars_files:
@@ -12,32 +11,44 @@
       - https://www.googleapis.com/auth/compute
 
   tasks:
-  - name: Test for installed DSA
+  - name: current os
+    debug:
+      msg: "{{ ansible_os_family }}"
+
+  - name: Test for installed DSA Linux
     stat:
       path: /opt/ds_agent/dsa_control
     register: stat_result
+    when: ansible_os_family == "Debian"
+
+  - name: Test for installed DSA Windows
+    win_stat:
+      path: "C:\\Program Files\\Trend Micro\\Deep Security Agent\\dsa_query.cmd"
+    register: stat_result
+    when: ansible_os_family == "Windows"
 
   - block:
-    - name: Get FQDN of host
-      shell: hostname -f
-      register: fqdn_raw
-
-    - name: Set FQDN fact
-      set_fact:
-        fqdn: "{{ fqdn_raw.stdout_lines[0] }}"
-
     - name: Create Computer Object in Deep Security
       ds:
-        hostname: "{{ fqdn }}"
+        hostname: "{{ hostvars[inventory_hostname].ansible_fqdn }}"
         state: present
         group_id: "{{ group_id }}"
         dsm_url: "https://{{ agent_download_hostname }}:{{ agent_download_port }}"
         api_key: "{{ api_key }}"
       register: ds_result
+      delegate_to: 127.0.0.1
+      when: ansible_os_family == "Debian"
 
-    - name: Did we create a computer
-      debug:
-        msg: "{{ ds_result }}"
+    - name: Create Computer Object in Deep Security
+      ds:
+        hostname: "{{ hostvars[inventory_hostname].ansible_fqdn | regex_replace('.$','') }}"
+        state: present
+        group_id: "{{ group_id }}"
+        dsm_url: "https://{{ agent_download_hostname }}:{{ agent_download_port }}"
+        api_key: "{{ api_key }}"
+      register: ds_result
+      delegate_to: 127.0.0.1
+      when: ansible_os_family == "Windows"
 
     - name: Tagging 1 if no dsa
       gce_tag:
