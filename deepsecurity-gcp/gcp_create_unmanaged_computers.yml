@@ -2,13 +2,15 @@
 - name: Deep Security
   gather_facts: no
   hosts: all
+
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+
   vars:
-    extra_vars:
-      zone: '{{ lookup("env", "zone" }}'
-      project_id: '{{lookup("env", "project_id" }}'
-      group_id: '{{ lookup("env", "group_id" }}'
-      dsm_url: '{{ lookup("env", "dsm_url") }}'
-      api_key: '{{ lookup("env", "api_key") }}'
+    scopes:
+      - https://www.googleapis.com/auth/compute
+
   tasks:
   - name: Test for installed DSA
     stat:
@@ -29,7 +31,7 @@
         hostname: "{{ fqdn }}"
         state: present
         group_id: "{{ group_id }}"
-        dsm_url: "https://{{ dsm_url }}:4119"
+        dsm_url: "https://{{ agent_download_hostname }}:{{ agent_download_port }}"
         api_key: "{{ api_key }}"
       register: ds_result
 
