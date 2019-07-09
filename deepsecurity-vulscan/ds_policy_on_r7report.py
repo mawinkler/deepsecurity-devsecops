@@ -17,12 +17,13 @@ description:
        configuration."
 
 options:
-    --hostName    hostname of the targeted host
     --dsm_url     url of deep security manager
     --api_key     api-key for deep security
+    --ds_hostName hostname of the targeted host in deep security
     --r7_url      url of rapid7
     --r7_username username for rapid7
     --r7_password password for rapid7
+    --r7_hostName hostname of the targeted host in rapid7
     --query       cves to handle
 
 author:
@@ -31,7 +32,8 @@ author:
 
 EXAMPLES = '''
 python3 ./ds_policy_on_r7report.py \
-    --hostname=172.21.2.74
+    --r7_hostname=172.21.2.74
+    --ds_hostname=ubuntu1
     --r7_url=https://<URL>:<PORT>
     --r7_username=<Username R7>
     --r7_password=<Password R7>
@@ -39,13 +41,13 @@ python3 ./ds_policy_on_r7report.py \
     --api_key=<API-KEY>
 
  python3 ./ds_policy_on_r7report.py \
-    --hostname=ubuntu1 \
+    --ds_hostname=ubuntu1 \
     --dsm_url=https://<URL>:<PORT> \
     --api_key=<API-KEY> \
     --query $(./parse.sh qualys_scan.csv)
 
 python3 ./ds_policy_on_r7report.py \
-    --hostname=ubuntu1 \
+    --ds_hostname=ubuntu1 \
     --dsm_url=https://<URL>:<PORT> \
     --api_key=<API-KEY> \
     --query CVE-2017-5715
@@ -500,10 +502,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dsm_url", help="url of deep security manager")
     parser.add_argument("--api_key", help="api-key for deep security")
+    parser.add_argument("--ds_hostname", help="hostname of the targeted host in deep security")
     parser.add_argument("--r7_url", help="url of rapid7 ")
     parser.add_argument("--r7_username", help="username for rapid7")
     parser.add_argument("--r7_password", help="password for rapid7")
-    parser.add_argument("--hostname", help="hostname of the targeted host")
+    parser.add_argument("--r7_hostname", help="hostname of the targeted host in rapid7")
     parser.add_argument("--query", nargs='*', type=str, help="cves to handle")
     args = parser.parse_args()
 
@@ -513,11 +516,11 @@ def main():
 
     print("\nRunning Deep Security Policy Manager for Rapid7 vulnerabilities")
     if args.query == None:
-        print("Requesting vulnerability scan report for {}".format(args.hostname))
+        print("Requesting vulnerability scan report for {}".format(args.r7_hostname))
         asset_id = r7_asset_search(args.r7_url,
                                    args.r7_username,
                                    args.r7_password,
-                                   args.hostname)
+                                   args.r7_hostname)
         asset_vuls_cves = r7_asset_vulnerabilities(args.r7_url,
                                                    args.r7_username,
                                                    args.r7_password,
@@ -531,9 +534,9 @@ def main():
     else:
         asset_cves = args.query
 
-    print("\nUpdating Deep Security Policy...")
+    print("\nUpdating Deep Security Policy for {}".format(args.ds_hostname))
     # run_module(args.dsm_url, args.api_key, args.hostname, args.query)
-    result = run_module(args.dsm_url, args.api_key, args.hostname, asset_cves)
+    result = run_module(args.dsm_url, args.api_key, args.ds_hostname, asset_cves)
 
     # Return key/value results
     # print("Rules covering CVEs:  {}".format(result['json']['rules_covering']))
