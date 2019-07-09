@@ -67,12 +67,15 @@
 - name: Delete non-existing computers from Deep Security
   gather_facts: no
   hosts: localhost
+
+  vars_files:
+    - ../../vars/secrets.yml
+    - ../../vars/gcp.yml
+
   vars:
-    extra_vars:
-      zone: '{{ lookup("env", "zone" }}'
-      project_id: '{{lookup("env", "project_id" }}'
-      dsm_url: '{{ lookup("env", "dsm_url") }}'
-      api_key: '{{ lookup("env", "api_key") }}'
+    scopes:
+      - https://www.googleapis.com/auth/compute
+      
   tasks:
   - name: DEBUG delete computers
     debug: var=item
