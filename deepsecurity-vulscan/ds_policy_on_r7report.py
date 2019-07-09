@@ -138,7 +138,9 @@ def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, asset_id):
 
     url = r7_url + "/api/3/assets/"  + str(asset_id) + "/vulnerabilities?size=10000"
 
-    response = requests.get(url, verify=False, auth=HTTPBasicAuth(r7_username, r7_password)).json()
+    response = requests.get(url,
+                            verify=False,
+                            auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
     if 'status' in response:
         if response['status'] >= 400:
@@ -149,7 +151,10 @@ def r7_asset_vulnerabilities(r7_url, r7_username, r7_password, asset_id):
     asset_cves = set()
 
     for vul in response['resources']:
-        asset_cves = r7_vulnerability_cves(r7_url, r7_username, r7_password, vul['id'])
+        asset_cves = r7_vulnerability_cves(r7_url,
+                                           r7_username,
+                                           r7_password,
+                                           vul['id'])
         cves = set()
 
         if asset_cves != "":
@@ -166,7 +171,9 @@ def r7_vulnerability_cves(r7_url, r7_username, r7_password, vul_id):
     '''
     url = r7_url + "/api/3/vulnerabilities/"  + str(vul_id)
 
-    response = requests.get(url, verify=False, auth=HTTPBasicAuth(r7_username, r7_password)).json()
+    response = requests.get(url,
+                            verify=False,
+                            auth=HTTPBasicAuth(r7_username, r7_password)).json()
 
     if 'status' in response:
         if response['status'] >= 400:
@@ -179,7 +186,11 @@ def r7_vulnerability_cves(r7_url, r7_username, r7_password, vul_id):
     else:
         return ""
 
-def r7_create_exception_for_instance(r7_url, r7_username, r7_password, asset_id, vul_id):
+def r7_create_exception_for_instance(r7_url,
+                                     r7_username,
+                                     r7_password,
+                                     asset_id,
+                                     vul_id):
     '''
     Create an exception for a given vulnerability and instance
     '''
@@ -209,7 +220,8 @@ def r7_create_exception_for_instance(r7_url, r7_username, r7_password, asset_id,
 
     if 'status' in response:
         if response['status'] == 200:
-            print("  Exception for " + vul_id + " created.\n" + response['message'])
+            print("  Exception for " + vul_id + " created.\n"
+                + response['message'])
             return 0
         if response['status'] >= 400:
             if response['message'] == "A vulnerability exception with this scope already exists.":
@@ -217,7 +229,8 @@ def r7_create_exception_for_instance(r7_url, r7_username, r7_password, asset_id,
             else:
                 raise Exception("Authentication to Rapid7 not successful"
                               + " or service unavailable.\n"
-                              + str(response['status']) + ":" + response['message'])
+                              + str(response['status']) + ":"
+                              + response['message'])
 
 def build_rules_cves_map(dsm_url, api_key):
     '''
@@ -233,13 +246,22 @@ def build_rules_cves_map(dsm_url, api_key):
     for i in range(0, MAX_RULE_ID, RESULT_SET_SIZE):
         url = dsm_url + "/api/intrusionpreventionrules/search"
         data = { "maxItems": RESULT_SET_SIZE,
-                 "searchCriteria": [ { "fieldName": "CVE", "stringTest": "not-equal", "stringValue": "" },
-                                     { "fieldName": "ID", "idTest": "greater-than-or-equal", "idValue": i },
-                                     { "fieldName": "ID", "idTest": "less-than", "idValue": i + RESULT_SET_SIZE } ] }
+                 "searchCriteria": [ { "fieldName": "CVE",
+                                       "stringTest": "not-equal",
+                                       "stringValue": "" },
+                                     { "fieldName": "ID",
+                                       "idTest": "greater-than-or-equal",
+                                       "idValue": i },
+                                     { "fieldName": "ID",
+                                       "idTest": "less-than",
+                                       "idValue": i + RESULT_SET_SIZE } ] }
         post_header = { "Content-type": "application/json",
                         "api-secret-key": api_key,
                         "api-version": "v1"}
-        response = requests.post(url, data=json.dumps(data), headers=post_header, verify=False).json()
+        response = requests.post(url,
+                                 data=json.dumps(data),
+                                 headers=post_header,
+                                 verify=False).json()
 
         # Error handling
         if 'message' in response:
@@ -273,11 +295,16 @@ def search_computer(hostname, dsm_url, api_key):
     '''
 
     url = dsm_url + "/api/computers/search"
-    data = { "maxItems": 1, "searchCriteria": [ { "fieldName": "hostName", "stringTest": "equal", "stringValue": hostname } ] }
+    data = { "maxItems": 1, "searchCriteria": [ { "fieldName": "hostName",
+                                                  "stringTest": "equal",
+                                                  "stringValue": hostname } ] }
     post_header = { "Content-type": "application/json",
                     "api-secret-key": api_key,
                     "api-version": "v1"}
-    response = requests.post(url, data=json.dumps(data), headers=post_header, verify=False).json()
+    response = requests.post(url,
+                             data=json.dumps(data),
+                             headers=post_header,
+                             verify=False).json()
 
     # Error handling
     if 'message' in response:
@@ -310,7 +337,10 @@ def search_ipsrule(identifier, dsm_url, api_key):
     post_header = { "Content-type": "application/json",
                     "api-secret-key": api_key,
                     "api-version": "v1"}
-    response = requests.post(url, data=json.dumps(data), headers=post_header, verify=False).json()
+    response = requests.post(url,
+                             data=json.dumps(data),
+                             headers=post_header,
+                             verify=False).json()
 
     # Error handling
     if 'intrusionPreventionRules' not in response:
@@ -332,13 +362,15 @@ def rule_present(computer, rule, dsm_url, api_key):
     '''
 
     if rule['ID'] not in computer['ruleIDs']:
-        # url = module.params['dsm_url'] + "/api/computers/" + str(computer_attributes[0]['ID']) + "/intrusionprevention/assignments"
         url = dsm_url + "/api/computers/" + str(computer['ID']) + "/intrusionprevention/assignments"
         data = { "ruleIDs": str(rule['ID']) }
         post_header = { "Content-type": "application/json",
                         "api-secret-key": api_key,
                         "api-version": "v1"}
-        computer_response = requests.post(url, data=json.dumps(data), headers=post_header, verify=False).json()
+        computer_response = requests.post(url,
+                                          data=json.dumps(data),
+                                          headers=post_header,
+                                          verify=False).json()
 
         # Rule added
         return 201
@@ -352,13 +384,15 @@ def rule_absent(computer, rule, dsm_url, api_key):
     '''
 
     if rule['ID'] in computer['ruleIDs']:
-        # url = module.params['dsm_url'] + "/api/computers/" + str(computer_attributes[0]['ID']) + "/intrusionprevention/assignments"
         url = dsm_url + "/api/computers/" + str(computer['ID']) + "/intrusionprevention/assignments/" + str(rule['ID'])
         data = { }
         post_header = { "Content-type": "application/json",
                         "api-secret-key": api_key,
                         "api-version": "v1"}
-        computer_response = requests.delete(url, data=json.dumps(data), headers=post_header, verify=False).json()
+        computer_response = requests.delete(url,
+                                            data=json.dumps(data),
+                                            headers=post_header,
+                                            verify=False).json()
 
         # Rule deleted
         return 201
@@ -393,9 +427,10 @@ def run_module(dsm_url, api_key, hostname, query):
     unmatch_counter = len(query)
 
     cves_list = {}
-    # If a cves_network.cache file generated by screperoter is found in the local directory, we load
-    # the hash map to easily lookup the attack vector and the criticality. Only network exploitable
-    # vulnerabilities currently exist in the cache file
+    # If a cves_network.cache file generated by screperoter is found in the
+    # local directory, we load the hash map to easily lookup the attack vector
+    # and the criticality. Only network exploitable vulnerabilities currently
+    # exist in the cache file
     if os.path.isfile('cves_network.cache'):
         with open('cves_network.cache', 'rb') as fp:
             cves_list = pickle.load(fp)
@@ -451,7 +486,10 @@ def run_module(dsm_url, api_key, hostname, query):
     # Ensure, that matching ips rules are present within the computers policy
     print("Ensuring that the covering rules are set.")
     for identifier in result['json']['rules_covering']:
-        rule_present(computer, search_ipsrule(identifier, dsm_url, api_key), dsm_url, api_key)
+        rule_present(computer,
+                     search_ipsrule(identifier, dsm_url, api_key),
+                     dsm_url,
+                     api_key)
 
     print("Policy updated.")
 
