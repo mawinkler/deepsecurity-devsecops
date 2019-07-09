@@ -1,0 +1,58 @@
+---
+- name: Deep Security
+  gather_facts: no
+  hosts: all
+  vars:
+    extra_vars:
+      zone: '{{ lookup("env", "zone" }}'
+      project_id: '{{lookup("env", "project_id" }}'
+      group_id: '{{ lookup("env", "group_id" }}'
+      dsm_url: '{{ lookup("env", "dsm_url") }}'
+      api_key: '{{ lookup("env", "api_key") }}'
+  tasks:
+  - name: Test for installed DSA
+    stat:
+      path: /opt/ds_agent/dsa_control
+    register: stat_result
+
+  - block:
+    - name: Get FQDN of host
+      shell: hostname -f
+      register: fqdn_raw
+
+    - name: Set FQDN fact
+      set_fact:
+        fqdn: "{{ fqdn_raw.stdout_lines[0] }}"
+
+    - name: Create Computer Object in Deep Security
+      ds:
+        hostname: "{{ fqdn }}"
+        state: present
+        group_id: "{{ group_id }}"
+        dsm_url: "https://{{ dsm_url }}:4119"
+        api_key: "{{ api_key }}"
+      register: ds_result
+
+    - name: Did we create a computer
+      debug:
+        msg: "{{ ds_result }}"
+
+    - name: Tagging 1 if no dsa
+      gce_tag:
+        instance_name: "{{ inventory_hostname }}"
+        zone: "{{ zone }}"
+        project_id: "{{ project_id }}"
+        tags: dsayes
+        state: absent
+      delegate_to: 127.0.0.1
+      when: ds_result.changed == "true"
+
+    - name: Tagging 2 if no dsa
+      gce_tag:
+        instance_name: "{{ inventory_hostname }}"
+        zone: "{{ zone }}"
+        project_id: "{{ project_id }}"
+        tags: dsano
+        state: present
+      delegate_to: 127.0.0.1
+      when: ds_result.changed == "true"
