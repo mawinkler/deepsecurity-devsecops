@@ -28,7 +28,7 @@
     when: ansible_os_family == "Windows"
 
   - block:
-    - name: Create Computer Object in Deep Security
+    - name: Create Computer Object in Deep Security Linux
       ds:
         hostname: "{{ hostvars[inventory_hostname].ansible_fqdn }}"
         state: present
@@ -39,7 +39,7 @@
       delegate_to: 127.0.0.1
       when: ansible_os_family == "Debian"
 
-    - name: Create Computer Object in Deep Security
+    - name: Create Computer Object in Deep Security Windows
       ds:
         hostname: "{{ hostvars[inventory_hostname].ansible_fqdn | regex_replace('.$','') }}"
         state: present
